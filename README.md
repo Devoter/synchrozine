@@ -1,5 +1,7 @@
 # synchrozine
 
+[![Build Status](https://travis-ci.org/Devoter/synchrozine.svg?branch=master)]
+
 Synchrozine is an instrument for synchronization of multiple goroutines over a single channel.
 It contains the main channel (`chan error`), [WaitGroup](https://golang.org/pkg/sync/#WaitGroup) for complete synchronization and receivers a channels list to send finish signals to goroutines.
 
