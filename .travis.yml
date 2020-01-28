@@ -15,3 +15,6 @@ env:
   - GO111MODULE=on
 
 go_import_path: github.com/Devoter/synchrozine
+
+script:
+  - go test -v ./...
