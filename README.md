@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.com/Devoter/synchrozine.svg?branch=master)](https://travis-ci.com/Devoter/synchrozine)
 
 Synchrozine is an instrument for synchronization of multiple goroutines over a single channel.
-It contains the main channel (`chan error`), [WaitGroup](https://golang.org/pkg/sync/#WaitGroup) for complete synchronization and receivers a channels list to send finish signals to goroutines.
+It provides the main channel (`chan error`), as well as tools for complete synchronization and receivers a channels list to send finish signals to goroutines.
 
 Synchrozine supports the startup synchronization and thread-safe injections.
 
@@ -11,7 +11,7 @@ Synchrozine supports the startup synchronization and thread-safe injections.
 
 ```sh
 go mod init github.com/my/repo
-go get github.com/Devoter/synchrozine/v2
+go get github.com/Devoter/synchrozine/v3
 ```
 
 ## Usage
@@ -61,7 +61,7 @@ go func() {
 Startup synchronization is optional, but if you want to be sure that all controlled goroutines have registered successfully call `StartSync()` in the parent goroutine.
 
 ```go
-synchro.StartSync()
+synchro.StartSync(context.TODO())
 ```
 
 ### Injection
@@ -77,7 +77,7 @@ synchro.Inject(fmt.Errorf("stop all"))
 In your parent goroutine insert a `Sync()` call. This method will wait for the injection. After that, it will have broadcast finish signals to controlled goroutines and wait for synchronization. This is a blocking method.
 
 ```go
-synchro.Sync()
+synchro.Sync(context.TODO())
 ```
 
 ### Example
@@ -86,6 +86,7 @@ synchro.Sync()
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -95,7 +96,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Devoter/synchrozine/v2"
+	"github.com/Devoter/synchrozine/v3"
 )
 
 func main() {
@@ -142,8 +143,20 @@ func main() {
 		}
 	}()
 
-	synchro.StartupSync() // optional, just if you want to be sure that all goroutines have started
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 10 * time.Second) // wait 10 seconds for startup
+	defer cancel()
 
-	log.Println("exit: ", synchro.Sync())
+	err := synchro.StartupSync(ctx) // optional, just if you want to be sure that all goroutines have started
+	if err != nil {
+		log.Printf("Startup operation failed by the reason: [%v]\n", err)
+		os.Exit(1)
+	}
+
+	ctx = context.Background()
+	ctx, cancel = context.WithTimeout(ctx, 10 * time.Second) // wait 10 seconds for sync
+	defer cancel()
+
+	log.Println("exit: ", synchro.Sync(ctx))
 }
 ```

@@ -13,10 +13,10 @@ func TestNew(t *testing.T) {
 	if synchro.receivers == nil {
 		t.Fatalf("receivers list should be initialized\n")
 	}
-	if synchro.wg == nil {
-		t.Fatalf("wait group should be initialized\n")
+	if synchro.counterCh == nil {
+		t.Fatalf("counter channel should be initialized\n")
 	}
-	if synchro.startWG == nil {
-		t.Fatalf("start wait group should be initialized\n")
+	if synchro.startCounterCh == nil {
+		t.Fatalf("start counter channel should be initialized\n")
 	}
 }

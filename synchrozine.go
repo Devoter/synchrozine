@@ -1,41 +1,50 @@
 package synchrozine
 
-import "sync"
+import (
+	"context"
+	"sync"
+	"sync/atomic"
+)
 
-import "sync/atomic"
-
-// Synchrozine is a complex solution for synchronization of multiple goroutines over a single channel.
-// It contains the main channel (`chan error`), WaitGroup for complete synchronization and receivers channels list
-// to send finish signals to goroutines.
+// Synchrozine is an instrument for synchronization of multiple goroutines over a single channel.
+// It provides the main channel (`chan error`), as well as tools for complete synchronization
+// and receives a channels list to send finish signals to goroutines.
 type Synchrozine struct {
-	message   chan error
-	receivers []chan<- bool
-	wg        *sync.WaitGroup
-	startWG   *sync.WaitGroup
-	injected  int32
+	message        chan error
+	receivers      []chan<- bool
+	counter        int64 // goroutines counter
+	startCounter   int64 // goroutines startup
+	counterCh      chan bool
+	startCounterCh chan bool
+	mx             sync.Mutex
+	startMX        sync.Mutex
+	injected       int32
 }
 
 // New creates a initialized instance of Synchrozine.
 func New() *Synchrozine {
 	return &Synchrozine{
-		message:   make(chan error, 1),
-		receivers: make([]chan<- bool, 0),
-		wg:        &sync.WaitGroup{},
-		startWG:   &sync.WaitGroup{},
+		message:        make(chan error, 1),
+		receivers:      make([]chan<- bool, 0),
+		counterCh:      make(chan bool, 1),
+		startCounterCh: make(chan bool, 1),
 	}
 }
 
 // Sync waits for a sync message, sends messages to receivers, and waits for goroutines completion.
-func (s *Synchrozine) Sync() error {
+func (s *Synchrozine) Sync(ctx context.Context) error {
 	message := <-s.message
 
 	for _, channel := range s.receivers {
 		channel <- true
 	}
 
-	s.wg.Wait()
-
-	return message
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-s.counterCh:
+		return message
+	}
 }
 
 // Inject sends a sync message.
@@ -47,26 +56,50 @@ func (s *Synchrozine) Inject(err error) {
 }
 
 // StartupSync waits for all appended goroutines to start.
-func (s *Synchrozine) StartupSync() {
-	s.startWG.Wait()
+func (s *Synchrozine) StartupSync(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-s.startCounterCh:
+		return nil
+	}
 }
 
 // Append creates a buffered receiver channel, adds it to the receivers list and returns for as read-only channel.
 func (s *Synchrozine) Append() <-chan bool {
 	receiver := make(chan bool, 1)
 	s.receivers = append(s.receivers, receiver)
-	s.startWG.Done()
+	s.startMX.Lock()
+	s.startCounter--
+	counter := s.startCounter
+	s.startMX.Unlock()
+
+	if counter <= 0 {
+		s.startCounterCh <- true
+	}
 
 	return receiver
 }
 
 // Add increments a counter of the internal WaitGroup  (see `sync.WaitGroup`).
 func (s *Synchrozine) Add() {
-	s.wg.Add(1)
-	s.startWG.Add(1)
+	s.mx.Lock()
+	s.counter++
+	s.mx.Unlock()
+
+	s.startMX.Lock()
+	s.startCounter++
+	s.startMX.Unlock()
 }
 
 // Done decrements a counte of the internal WaitGroup (see `sync.WaitGroup`).
 func (s *Synchrozine) Done() {
-	s.wg.Done()
+	s.mx.Lock()
+	s.counter--
+	counter := s.counter
+	s.mx.Unlock()
+
+	if counter <= 0 {
+		s.counterCh <- true
+	}
 }
