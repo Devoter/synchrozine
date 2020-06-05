@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/Devoter/synchrozine/v3"
+	. "github.com/Devoter/synchrozine/v4"
 )
 
 func TestSyncTwoGoroutines(t *testing.T) {
@@ -47,13 +47,13 @@ func TestSyncTwoGoroutines(t *testing.T) {
 		}
 	}()
 
-	synchro.StartupSync(context.TODO())
+	synchro.StartupSync(func() context.Context { return context.TODO() })
 
 	injectErr := fmt.Errorf("stop goroutines")
 
 	synchro.Inject(injectErr)
 
-	err := synchro.Sync(context.TODO())
+	err := synchro.Sync(func() context.Context { return context.TODO() })
 	if injectErr != err {
 		t.Fatalf("Expected error is [%v], got [%v]\n", injectErr, err)
 	}
@@ -88,7 +88,7 @@ func TestMultipleInjections(t *testing.T) {
 		}
 	}()
 
-	synchro.StartupSync(context.TODO())
+	synchro.StartupSync(func() context.Context { return context.TODO() })
 
 	injectErr := fmt.Errorf("stop goroutines")
 	injectErr2 := fmt.Errorf("stop 2")
@@ -96,7 +96,7 @@ func TestMultipleInjections(t *testing.T) {
 	synchro.Inject(injectErr)
 	synchro.Inject(injectErr2)
 
-	err := synchro.Sync(context.TODO())
+	err := synchro.Sync(func() context.Context { return context.TODO() })
 	if injectErr != err {
 		t.Fatalf("Expected error is [%v], got [%v]\n", injectErr, err)
 	}
@@ -131,9 +131,9 @@ func TestInjectBeforeStartupSync(t *testing.T) {
 
 	synchro.Inject(injectErr)
 
-	synchro.StartupSync(context.TODO())
+	synchro.StartupSync(func() context.Context { return context.TODO() })
 
-	err := synchro.Sync(context.TODO())
+	err := synchro.Sync(func() context.Context { return context.TODO() })
 	if injectErr != err {
 		t.Fatalf("Expected error is [%v], got [%v]\n", injectErr, err)
 	}
@@ -183,13 +183,13 @@ func TestInjectFromAnotherGoroutine(t *testing.T) {
 
 	injectErr := fmt.Errorf("stop goroutines")
 
-	synchro.StartupSync(context.TODO())
+	synchro.StartupSync(func() context.Context { return context.TODO() })
 
 	go func() {
 		synchro.Inject(injectErr)
 	}()
 
-	err := synchro.Sync(context.TODO())
+	err := synchro.Sync(func() context.Context { return context.TODO() })
 	if injectErr != err {
 		t.Fatalf("Expected error is [%v], got [%v]\n", injectErr, err)
 	}
@@ -224,11 +224,11 @@ func TestInjectNil(t *testing.T) {
 		}
 	}()
 
-	synchro.StartupSync(context.TODO())
+	synchro.StartupSync(func() context.Context { return context.TODO() })
 
 	synchro.Inject(nil)
 
-	err := synchro.Sync(context.TODO())
+	err := synchro.Sync(func() context.Context { return context.TODO() })
 	if err != nil {
 		t.Fatalf("Expected error is [%v], got [%v]\n", nil, err)
 	}
@@ -243,9 +243,14 @@ func TestStartupCanceled(t *testing.T) {
 
 	synchro.Add()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	err := synchro.StartupSync(ctx)
+	makeCtx := func() context.Context {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		return ctx
+	}
+
+	err := synchro.StartupSync(makeCtx)
 	if context.Canceled != err {
 		t.Fatalf("Expected error is [%v], got [%v]\n", context.Canceled, err)
 	}
@@ -259,16 +264,24 @@ func TestSyncTimeoutExceeded(t *testing.T) {
 		<-synchro.Append()
 	}()
 
-	synchro.StartupSync(context.TODO())
+	synchro.StartupSync(func() context.Context { return context.TODO() })
 
 	injectErr := fmt.Errorf("stop goroutines")
 
 	synchro.Inject(injectErr)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
-	defer cancel()
+	var cancel context.CancelFunc
 
-	err := synchro.Sync(ctx)
+	makeCtx := func() context.Context {
+		var ctx context.Context
+		ctx, cancel = context.WithTimeout(context.Background(), 10*time.Millisecond)
+
+		return ctx
+	}
+
+	defer func() { cancel() }()
+
+	err := synchro.Sync(makeCtx)
 	if context.DeadlineExceeded != err {
 		t.Fatalf("Expected error is [%v], got [%v]\n", context.DeadlineExceeded, err)
 	}

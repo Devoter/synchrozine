@@ -32,12 +32,14 @@ func New() *Synchrozine {
 }
 
 // Sync waits for a sync message, sends messages to receivers, and waits for goroutines completion.
-func (s *Synchrozine) Sync(ctx context.Context) error {
+func (s *Synchrozine) Sync(ctxFactory func() context.Context) error {
 	message := <-s.message
 
 	for _, channel := range s.receivers {
 		channel <- true
 	}
+
+	ctx := ctxFactory()
 
 	select {
 	case <-ctx.Done():
@@ -56,7 +58,9 @@ func (s *Synchrozine) Inject(err error) {
 }
 
 // StartupSync waits for all appended goroutines to start.
-func (s *Synchrozine) StartupSync(ctx context.Context) error {
+func (s *Synchrozine) StartupSync(ctxFactory func() context.Context) error {
+	ctx := ctxFactory()
+
 	select {
 	case <-ctx.Done():
 		return ctx.Err()

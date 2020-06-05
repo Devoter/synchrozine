@@ -61,7 +61,7 @@ go func() {
 Startup synchronization is optional, but if you want to be sure that all controlled goroutines have registered successfully call `StartSync()` in the parent goroutine.
 
 ```go
-synchro.StartSync(context.TODO())
+synchro.StartSync(func() context.Context { return context.TODO() })
 ```
 
 ### Injection
@@ -77,7 +77,7 @@ synchro.Inject(fmt.Errorf("stop all"))
 In your parent goroutine insert a `Sync()` call. This method will wait for the injection. After that, it will have broadcast finish signals to controlled goroutines and wait for synchronization. This is a blocking method.
 
 ```go
-synchro.Sync(context.TODO())
+synchro.Sync(func() context.Context { return context.TODO() })
 ```
 
 ### Example
@@ -96,7 +96,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Devoter/synchrozine/v3"
+	"github.com/Devoter/synchrozine/v4"
 )
 
 func main() {
@@ -144,19 +144,33 @@ func main() {
 	}()
 
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 10 * time.Second) // wait 10 seconds for startup
-	defer cancel()
+	var cancel context.CancelFunc
 
-	err := synchro.StartupSync(ctx) // optional, just if you want to be sure that all goroutines have started
+	makeStartupCtx := func() context.Context {
+		ctx, cancel = context.WithTimeout(ctx, 10 * time.Second) // wait 10 seconds for startup
+
+		return ctx
+	}
+	
+	defer func() { cancel() }()
+
+	err := synchro.StartupSync(makeStartupCtx) // optional, just if you want to be sure that all goroutines have started
 	if err != nil {
 		log.Printf("Startup operation failed by the reason: [%v]\n", err)
 		os.Exit(1)
 	}
 
-	ctx = context.Background()
-	ctx, cancel = context.WithTimeout(ctx, 10 * time.Second) // wait 10 seconds for sync
-	defer cancel()
+	syncCtx = context.Background()
+	var syncCancel context.CancelFunc
 
-	log.Println("exit: ", synchro.Sync(ctx))
+	makeSyncCtx := func() context.Context {
+		syncCtx, syncCancel = context.WithTimeout(ctx, 10 * time.Second) // wait 10 seconds for sync
+
+		return syncCtx
+	}
+	
+	defer func() { syncCancel() }()
+
+	log.Println("exit: ", synchro.Sync(makeSyncCtx))
 }
 ```
