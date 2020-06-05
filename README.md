@@ -174,3 +174,7 @@ func main() {
 	log.Println("exit: ", synchro.Sync(makeSyncCtx))
 }
 ```
+
+## License
+
+[MIT](LICENSE)
