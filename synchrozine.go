@@ -40,6 +40,8 @@ func (s *Synchrozine) Sync(ctxFactory func() context.Context) error {
 		channel <- true
 	}
 
+	ctx := ctxFactory()
+
 	s.mx.RLock()
 	counter := s.counter
 	s.mx.RUnlock()
@@ -47,8 +49,6 @@ func (s *Synchrozine) Sync(ctxFactory func() context.Context) error {
 	if counter <= 0 {
 		return message
 	}
-
-	ctx := ctxFactory()
 
 	select {
 	case <-ctx.Done():
