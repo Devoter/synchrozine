@@ -11,12 +11,12 @@ Synchrozine supports the startup synchronization and thread-safe injections.
 
 ```sh
 go mod init github.com/my/repo
-go get github.com/Devoter/synchrozine/v3
+go get github.com/Devoter/synchrozine/v4
 ```
 
 ## Usage
 
-It is easy to use Synchrozine and simular to sync.WaitGroup. We have five lifecycle steps:
+It is easy to use Synchrozine. We have five lifecycle steps:
 
 1. Goroutines declaration
 2. Goroutines registration
@@ -26,7 +26,7 @@ It is easy to use Synchrozine and simular to sync.WaitGroup. We have five lifecy
 
 ### Goroutines declaration
 
-At first you should declare that a goroutine will be registered. Call `Add()` before start the goroutine.
+At first you should declare that a goroutine will be registered. Call `Add()` (or `AddMany(int)`) before start the goroutine(s).
 
 ```go
 synchro.Add()
