@@ -10,15 +10,16 @@ import (
 // It provides the main channel (`chan error`), as well as tools for complete synchronization
 // and receives a channels list to send finish signals to goroutines.
 type Synchrozine struct {
-	message        chan error
-	receivers      []chan<- bool
-	counter        int64 // goroutines counter
-	startCounter   int64 // goroutines startup
-	counterCh      chan bool
-	startCounterCh chan bool
-	mx             sync.Mutex
-	startMX        sync.Mutex
-	injected       int32
+	message           chan error
+	receivers         []chan<- bool
+	counter           int64 // goroutines counter
+	startCounter      int64 // goroutines startup
+	counterCh         chan bool
+	startCounterCh    chan bool
+	mx                sync.Mutex
+	startMX           sync.Mutex
+	injected          int32
+	waitingForStartup bool
 }
 
 // New creates a initialized instance of Synchrozine.
@@ -59,6 +60,10 @@ func (s *Synchrozine) Inject(err error) {
 
 // StartupSync waits for all appended goroutines to start.
 func (s *Synchrozine) StartupSync(ctxFactory func() context.Context) error {
+	s.startMX.Lock()
+	s.waitingForStartup = true
+	s.startMX.Unlock()
+
 	ctx := ctxFactory()
 
 	select {
@@ -76,16 +81,17 @@ func (s *Synchrozine) Append() <-chan bool {
 	s.startMX.Lock()
 	s.startCounter--
 	counter := s.startCounter
+	waitingForStartup := s.waitingForStartup
 	s.startMX.Unlock()
 
-	if counter <= 0 {
+	if counter <= 0 && waitingForStartup {
 		s.startCounterCh <- true
 	}
 
 	return receiver
 }
 
-// Add increments a counter of the internal WaitGroup  (see `sync.WaitGroup`).
+// Add increments a counter of controlled goroutines.
 func (s *Synchrozine) Add() {
 	s.mx.Lock()
 	s.counter++
@@ -96,7 +102,18 @@ func (s *Synchrozine) Add() {
 	s.startMX.Unlock()
 }
 
-// Done decrements a counte of the internal WaitGroup (see `sync.WaitGroup`).
+// AddMany increments a counter of controlled goroutines on the specified value.
+func (s *Synchrozine) AddMany(count int) {
+	s.mx.Lock()
+	s.counter += int64(count)
+	s.mx.Unlock()
+
+	s.startMX.Lock()
+	s.startCounter += int64(count)
+	s.startMX.Unlock()
+}
+
+// Done decrements a counter of controlled goroutines.
 func (s *Synchrozine) Done() {
 	s.mx.Lock()
 	s.counter--

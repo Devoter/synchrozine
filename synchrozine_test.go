@@ -67,6 +67,85 @@ func TestSyncTwoGoroutines(t *testing.T) {
 	}
 }
 
+func TestMultipleGoroutinesWithoutStartupSync(t *testing.T) {
+	synchro := New()
+
+	dur := 50 * time.Millisecond
+	f1Failed := false
+
+	synchro.Add()
+	go func() {
+		defer synchro.Done()
+
+		finishChan := synchro.Append()
+
+		select {
+		case <-finishChan:
+			return
+		case <-time.After(dur):
+			f1Failed = true
+			return
+		}
+	}()
+
+	f2Failed := false
+
+	synchro.Add()
+	go func() {
+		defer synchro.Done()
+
+		finishChan := synchro.Append()
+
+		select {
+		case <-finishChan:
+			return
+		case <-time.After(dur):
+			f2Failed = true
+			return
+		}
+	}()
+
+	f3Failed := false
+
+	synchro.Add()
+	go func() {
+		defer synchro.Done()
+
+		finishChan := synchro.Append()
+
+		select {
+		case <-finishChan:
+			return
+		case <-time.After(dur):
+			f3Failed = true
+			return
+		}
+	}()
+
+	injectErr := fmt.Errorf("stop goroutines")
+
+	time.Sleep(20 * time.Millisecond)
+
+	synchro.Inject(injectErr)
+
+	err := synchro.Sync(func() context.Context { return context.TODO() })
+	if injectErr != err {
+		t.Fatalf("Expected error is [%v], got [%v]\n", injectErr, err)
+	}
+
+	if f1Failed {
+		t.Fatalf("First goroutine synchonization failed\n")
+	}
+
+	if f2Failed {
+		t.Fatalf("Second goroutine synchonization failed\n")
+	}
+
+	if f3Failed {
+		t.Fatalf("Third goroutine synchonization failed\n")
+	}
+}
+
 func TestMultipleInjections(t *testing.T) {
 	synchro := New()
 
