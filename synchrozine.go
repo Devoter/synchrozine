@@ -16,7 +16,7 @@ type Synchrozine struct {
 	startCounter      int64 // goroutines startup
 	counterCh         chan bool
 	startCounterCh    chan bool
-	mx                sync.Mutex
+	mx                sync.RWMutex
 	startMX           sync.Mutex
 	injected          int32
 	waitingForStartup bool
@@ -38,6 +38,14 @@ func (s *Synchrozine) Sync(ctxFactory func() context.Context) error {
 
 	for _, channel := range s.receivers {
 		channel <- true
+	}
+
+	s.mx.RLock()
+	counter := s.counter
+	s.mx.RUnlock()
+
+	if counter <= 0 {
+		return message
 	}
 
 	ctx := ctxFactory()
