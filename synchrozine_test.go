@@ -73,7 +73,7 @@ func TestMultipleGoroutinesWithoutStartupSync(t *testing.T) {
 	dur := 50 * time.Millisecond
 	f1Failed := false
 
-	synchro.Add()
+	synchro.AddMany(3)
 	go func() {
 		defer synchro.Done()
 
@@ -90,7 +90,6 @@ func TestMultipleGoroutinesWithoutStartupSync(t *testing.T) {
 
 	f2Failed := false
 
-	synchro.Add()
 	go func() {
 		defer synchro.Done()
 
@@ -107,7 +106,6 @@ func TestMultipleGoroutinesWithoutStartupSync(t *testing.T) {
 
 	f3Failed := false
 
-	synchro.Add()
 	go func() {
 		defer synchro.Done()
 
@@ -143,6 +141,18 @@ func TestMultipleGoroutinesWithoutStartupSync(t *testing.T) {
 
 	if f3Failed {
 		t.Fatalf("Third goroutine synchonization failed\n")
+	}
+}
+
+func TestNoGoroutines(t *testing.T) {
+	synchro := New()
+	injectErr := fmt.Errorf("stop goroutines")
+
+	synchro.Inject(injectErr)
+
+	err := synchro.Sync(func() context.Context { return context.TODO() })
+	if injectErr != err {
+		t.Fatalf("Expected error is [%v], got [%v]\n", injectErr, err)
 	}
 }
 
