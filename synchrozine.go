@@ -85,8 +85,8 @@ func (s *Synchrozine) StartupSync(ctxFactory func() context.Context) error {
 // Append creates a buffered receiver channel, adds it to the receivers list and returns for as read-only channel.
 func (s *Synchrozine) Append() <-chan bool {
 	receiver := make(chan bool, 1)
-	s.receivers = append(s.receivers, receiver)
 	s.startMX.Lock()
+	s.receivers = append(s.receivers, receiver)
 	s.startCounter--
 	counter := s.startCounter
 	waitingForStartup := s.waitingForStartup
