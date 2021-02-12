@@ -143,15 +143,15 @@ func main() {
 		}
 	}()
 
-	ctx := context.Background()
 	var cancel context.CancelFunc
 
 	makeStartupCtx := func() context.Context {
-		ctx, cancel = context.WithTimeout(ctx, 10 * time.Second) // wait 10 seconds for startup
+		var ctx context.Context
+		ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second) // wait 10 seconds for startup
 
 		return ctx
 	}
-	
+
 	defer func() { cancel() }()
 
 	err := synchro.StartupSync(makeStartupCtx) // optional, just if you want to be sure that all goroutines have started
@@ -160,15 +160,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	syncCtx = context.Background()
 	var syncCancel context.CancelFunc
 
 	makeSyncCtx := func() context.Context {
-		syncCtx, syncCancel = context.WithTimeout(ctx, 10 * time.Second) // wait 10 seconds for sync
+		var ctx context.Context
+		ctx, syncCancel = context.WithTimeout(context.Background(), 10*time.Second) // wait 10 seconds for sync
 
-		return syncCtx
+		return ctx
 	}
-	
+
 	defer func() { syncCancel() }()
 
 	log.Println("exit: ", synchro.Sync(makeSyncCtx))
