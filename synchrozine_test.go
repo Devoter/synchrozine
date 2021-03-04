@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/Devoter/synchrozine/v4"
+	. "github.com/Devoter/synchrozine/v5"
 )
 
 func TestSyncTwoGoroutines(t *testing.T) {

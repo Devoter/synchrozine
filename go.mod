@@ -1,3 +1,3 @@
-module github.com/Devoter/synchrozine/v4
+module github.com/Devoter/synchrozine/v5
 
 go 1.13

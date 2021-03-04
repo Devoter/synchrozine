@@ -11,7 +11,7 @@ Synchrozine supports the startup synchronization and thread-safe injections.
 
 ```sh
 go mod init github.com/my/repo
-go get github.com/Devoter/synchrozine/v4
+go get github.com/Devoter/synchrozine/v5
 ```
 
 ## Usage
@@ -96,7 +96,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Devoter/synchrozine/v4"
+	"github.com/Devoter/synchrozine/v5"
 )
 
 func main() {
