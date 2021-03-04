@@ -11,11 +11,11 @@ import (
 // and receives a channels list to send finish signals to goroutines.
 type Synchrozine struct {
 	message           chan error
-	receivers         []chan<- bool
+	receivers         []chan<- struct{}
 	counter           int64 // goroutines counter
 	startCounter      int64 // goroutines startup
-	counterCh         chan bool
-	startCounterCh    chan bool
+	counterCh         chan struct{}
+	startCounterCh    chan struct{}
 	mx                sync.RWMutex
 	startMX           sync.Mutex
 	injected          int32
@@ -26,9 +26,9 @@ type Synchrozine struct {
 func New() *Synchrozine {
 	return &Synchrozine{
 		message:        make(chan error, 1),
-		receivers:      make([]chan<- bool, 0),
-		counterCh:      make(chan bool, 1),
-		startCounterCh: make(chan bool, 1),
+		receivers:      make([]chan<- struct{}, 0),
+		counterCh:      make(chan struct{}, 1),
+		startCounterCh: make(chan struct{}, 1),
 	}
 }
 
@@ -37,7 +37,7 @@ func (s *Synchrozine) Sync(ctxFactory func() context.Context) error {
 	message := <-s.message
 
 	for _, channel := range s.receivers {
-		channel <- true
+		channel <- struct{}{}
 	}
 
 	ctx := ctxFactory()
@@ -83,8 +83,8 @@ func (s *Synchrozine) StartupSync(ctxFactory func() context.Context) error {
 }
 
 // Append creates a buffered receiver channel, adds it to the receivers list and returns for as read-only channel.
-func (s *Synchrozine) Append() <-chan bool {
-	receiver := make(chan bool, 1)
+func (s *Synchrozine) Append() <-chan struct{} {
+	receiver := make(chan struct{}, 1)
 	s.startMX.Lock()
 	s.receivers = append(s.receivers, receiver)
 	s.startCounter--
@@ -93,7 +93,7 @@ func (s *Synchrozine) Append() <-chan bool {
 	s.startMX.Unlock()
 
 	if counter <= 0 && waitingForStartup {
-		s.startCounterCh <- true
+		s.startCounterCh <- struct{}{}
 	}
 
 	return receiver
@@ -129,6 +129,6 @@ func (s *Synchrozine) Done() {
 	s.mx.Unlock()
 
 	if counter <= 0 {
-		s.counterCh <- true
+		s.counterCh <- struct{}{}
 	}
 }
