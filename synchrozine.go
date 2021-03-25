@@ -69,6 +69,13 @@ func (s *Synchrozine) Inject(err error) {
 // StartupSync waits for all appended goroutines to start.
 func (s *Synchrozine) StartupSync(ctxFactory func() context.Context) error {
 	s.startMX.Lock()
+
+	if s.startCounter <= 0 {
+		s.startMX.Unlock()
+		ctxFactory() // initialize context to prevent runtime errors of canceling of nil context
+		return nil
+	}
+
 	s.waitingForStartup = true
 	s.startMX.Unlock()
 

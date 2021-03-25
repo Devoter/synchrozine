@@ -375,3 +375,21 @@ func TestSyncTimeoutExceeded(t *testing.T) {
 		t.Fatalf("Expected error is [%v], got [%v]\n", context.DeadlineExceeded, err)
 	}
 }
+
+func TestSyncStartupWithoutGoroutines(t *testing.T) {
+	synchro := New()
+	dur := 50 * time.Millisecond
+	var cancel context.CancelFunc
+	defer func() { cancel() }()
+
+	err := synchro.StartupSync(func() context.Context {
+		var ctx context.Context
+		ctx, cancel = context.WithTimeout(context.Background(), dur)
+
+		return ctx
+	})
+
+	if err != nil {
+		t.Fatalf("Expected error is [%v], got [%v]\n", nil, err)
+	}
+}
