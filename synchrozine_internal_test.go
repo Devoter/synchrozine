@@ -10,8 +10,8 @@ func TestNew(t *testing.T) {
 	if synchro.message == nil {
 		t.Fatalf("message channel should be initialized\n")
 	}
-	if synchro.receivers == nil {
-		t.Fatalf("receivers list should be initialized\n")
+	if synchro.receiverCh == nil {
+		t.Fatalf("receiver channel should be initialized\n")
 	}
 	if synchro.counterCh == nil {
 		t.Fatalf("counter channel should be initialized\n")

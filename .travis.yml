@@ -15,7 +15,7 @@ jobs:
 env:
   - GO111MODULE=on
 
-go_import_path: github.com/Devoter/synchrozine/v4
+go_import_path: github.com/Devoter/synchrozine/v5
 
 script:
   - go test -v ./...
