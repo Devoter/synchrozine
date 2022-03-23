@@ -1,6 +1,6 @@
 # synchrozine
 
-[![Build Status](https://travis-ci.com/Devoter/synchrozine.svg?branch=master)](https://travis-ci.com/Devoter/synchrozine)
+[![Build Status](https://app.travis-ci.com/Devoter/synchrozine.svg?branch=master)](https://app.travis-ci.com/github/Devoter/synchrozine)
 
 Synchrozine is an instrument for synchronization of multiple goroutines over a single channel.
 It provides the main channel (`chan error`), as well as tools for complete synchronization and receivers a channels list to send finish signals to goroutines.
